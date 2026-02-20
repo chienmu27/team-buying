@@ -3,227 +3,591 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>阿胖團購 - 訂購系統 / 後台管理</title>
+<title>阿胖團購系統</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
-  body { font-family: 'Noto Sans TC', sans-serif; background-color: #f9fafb; }
-  .category-btn.active { background-color: #ef4444; color: white; }
+  body { font-family: 'Noto Sans TC', sans-serif; background-color: #f9fafb; -webkit-tap-highlight-color: transparent; }
+  .category-btn.active { background-color: #ef4444; color: white; border-color: #ef4444; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
+  
+  /* Modal Animation */
+  .modal { transition: opacity 0.25s ease; }
+  body.modal-active { overflow: hidden; }
 </style>
 </head>
-<body class="pb-20">
+<body class="pb-20 text-gray-800">
 
-<header class="bg-red-600 text-white p-4 shadow-md sticky top-0 z-50">
-  <div class="container mx-auto flex justify-between items-center">
-    <h1 class="text-2xl font-bold">阿胖團購</h1>
+<!-- 頂部導航 -->
+<header class="bg-red-600 text-white shadow-md sticky top-0 z-40">
+  <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+    <h1 class="text-xl font-bold flex items-center gap-2">
+      <i class="fas fa-utensils"></i> 阿胖團購
+    </h1>
     <div class="flex items-center gap-3">
-      <div class="text-sm bg-white/20 px-3 py-1 rounded-full">姓名：<span id="table-no">-</span></div>
-      <div>
-        <button onclick="switchView('order')" class="bg-white/20 px-3 py-1 rounded-lg font-bold">前台訂購</button>
-        <button onclick="switchView('admin')" class="bg-white/20 px-3 py-1 rounded-lg font-bold">後台管理</button>
-      </div>
-      <div onclick="toggleCart()" class="relative cursor-pointer">
-        <i class="fas fa-shopping-cart text-2xl"></i>
-        <span id="cart-count" class="absolute -top-2 -right-2 bg-yellow-400 text-red-800 text-xs font-bold px-1.5 py-0.5 rounded-full">0</span>
-      </div>
+        <!-- 切換介面按鈕 -->
+        <div class="bg-red-800 p-1 rounded-lg flex text-xs font-bold">
+            <button onclick="switchView('client')" id="btn-view-client" class="px-3 py-1 rounded bg-white text-red-800 shadow transition">訂購</button>
+            <button onclick="switchView('admin')" id="btn-view-admin" class="px-3 py-1 rounded text-red-200 hover:text-white transition">管理</button>
+        </div>
     </div>
   </div>
 </header>
 
-<!-- 前台訂購區 -->
-<div id="order-view">
-  <div id="greeting" class="bg-orange-100 p-8 text-center border-b border-orange-200">
-    <h2 id="greeting-title" class="text-3xl font-bold text-gray-800 mb-2"></h2>
-    <p class="text-gray-600 text-lg">祝您有個美好的一天</p>
-  </div>
-
-  <nav id="category-nav" class="sticky top-[64px] bg-white border-b overflow-x-auto whitespace-nowrap z-40 px-4 py-3 flex gap-2 no-scrollbar">
-    <button onclick="filterMenu('all')" class="category-btn active px-4 py-1.5 rounded-full border border-gray-300 text-sm">全部</button>
-  </nav>
-
-  <main class="container mx-auto p-4">
-    <div id="loading-spinner" class="text-center py-20 text-gray-500">
-      <i class="fas fa-spinner fa-spin text-4xl mb-2"></i>
-      <p>正在載入菜單...</p>
+<!-- ================= 頁面：前台點餐 (Client View) ================= -->
+<div id="view-client">
+    <!-- 歡迎區塊 & 訂購人設定 -->
+    <div class="bg-orange-50 border-b border-orange-100 p-4">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+            <div>
+                <h2 id="greeting-title" class="text-xl font-bold text-gray-800"></h2>
+                <p class="text-sm text-gray-500">今天想吃點什麼？</p>
+            </div>
+            
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <button onclick="openNameModal()" class="flex-1 md:flex-none bg-white border border-orange-200 text-orange-700 px-4 py-2 rounded-full shadow-sm hover:bg-orange-100 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-user-edit"></i>
+                    <span id="display-name">設定訂購人</span>
+                </button>
+                
+                <div onclick="toggleCart()" class="relative cursor-pointer bg-white p-2 rounded-full shadow-sm border border-gray-200 w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-shopping-cart text-gray-600"></i>
+                    <span id="cart-count" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">0</span>
+                </div>
+            </div>
+        </div>
     </div>
-    <div id="menu-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-  </main>
 
-  <div id="cart-sidebar" class="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-[60] flex flex-col">
-    <div class="p-4 border-b flex justify-between items-center bg-gray-50">
-      <h3 class="font-bold text-xl">已選餐點</h3>
-      <button onclick="toggleCart()" class="text-gray-500 text-2xl">&times;</button>
-    </div>
-    <div id="cart-items" class="flex-grow overflow-y-auto p-4 space-y-4"></div>
-    <div class="p-4 border-t bg-gray-50">
-      <div class="flex justify-between mb-4"><span class="font-bold">總計：</span><span class="text-red-600 font-bold text-xl" id="total-price">$0</span></div>
-      <button id="btn-submit" onclick="submitOrder()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">送出訂單</button>
-    </div>
-  </div>
-  <div id="overlay" onclick="toggleCart()" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50"></div>
+    <!-- 類別導覽 -->
+    <nav id="category-nav" class="sticky top-[60px] bg-white/95 backdrop-blur border-b overflow-x-auto whitespace-nowrap z-30 px-4 py-3 flex gap-2 no-scrollbar shadow-sm">
+        <button onclick="filterMenu('all')" class="category-btn active px-4 py-1.5 rounded-full border border-gray-300 text-sm font-medium transition">全部</button>
+    </nav>
+
+    <!-- 菜單列表 -->
+    <main class="container mx-auto p-4 min-h-[50vh]">
+        <div id="loading-spinner" class="text-center py-20 text-gray-400">
+            <i class="fas fa-circle-notch fa-spin text-4xl mb-3 text-red-400"></i>
+            <p>正在載入菜單...</p>
+        </div>
+        <div id="menu-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </main>
 </div>
 
-<!-- 後台管理區 -->
-<div id="admin-view" class="hidden bg-gray-50 min-h-screen">
-  <header class="bg-red-600 text-white p-4 shadow sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto flex items-center justify-between">
-      <h1 class="text-xl font-bold">阿胖團購｜訂單管理</h1>
-      <div class="flex gap-2">
-        <button onclick="loadData()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg font-bold">重新整理</button>
-      </div>
+<!-- ================= 頁面：後台管理 (Admin View) ================= -->
+<div id="view-admin" class="hidden container mx-auto p-4">
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">訂單管理</h2>
+            <p id="admin-status" class="text-sm text-gray-500 mt-1">載入中...</p>
+        </div>
+        <button onclick="loadAdminData()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg transition">
+            <i class="fas fa-sync-alt mr-1"></i> 刷新
+        </button>
     </div>
-  </header>
-  <main class="max-w-6xl mx-auto p-4">
-    <div id="status" class="text-gray-600 mb-4"></div>
-    <div id="tables" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-  </main>
+    
+    <div id="admin-orders-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- 訂單卡片將生成於此 -->
+    </div>
+</div>
+
+<!-- ================= 側邊購物車 ================= -->
+<div id="cart-sidebar" class="fixed inset-y-0 right-0 w-full md:w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-[60] flex flex-col">
+  <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+    <h3 class="font-bold text-lg"><i class="fas fa-shopping-bag text-red-500 mr-2"></i>已選餐點</h3>
+    <button onclick="toggleCart()" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition">&times;</button>
+  </div>
+  <div id="cart-items" class="flex-grow overflow-y-auto p-4 space-y-3"></div>
+  <div class="p-4 border-t bg-gray-50 safe-area-bottom">
+    <div class="flex justify-between mb-4 items-end">
+        <span class="text-gray-600 text-sm">總計</span>
+        <span class="text-red-600 font-black text-2xl" id="total-price">$0</span>
+    </div>
+    <button id="btn-submit" onclick="submitOrder()" class="w-full bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white py-3.5 rounded-xl font-bold shadow-lg shadow-red-200 transition">
+        送出訂單
+    </button>
+  </div>
+</div>
+<div id="overlay" onclick="toggleCart()" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] hidden z-50 transition-opacity"></div>
+
+<!-- ================= 模態視窗：輸入姓名 ================= -->
+<div id="modal-name" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[70]">
+    <div class="modal-overlay absolute w-full h-full bg-black/50 backdrop-blur-sm" onclick="closeNameModal()"></div>
+    <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded-2xl shadow-2xl z-50 overflow-y-auto transform scale-95 transition-transform duration-300">
+        <div class="modal-content py-6 text-left px-6">
+            <div class="flex justify-between items-center pb-3">
+                <p class="text-2xl font-bold text-gray-800">👋 您好！</p>
+                <div class="cursor-pointer z-50" onclick="closeNameModal()">
+                    <i class="fas fa-times text-gray-500"></i>
+                </div>
+            </div>
+            <p class="text-gray-500 mb-6">請輸入您的姓名以便我們辨識訂單。</p>
+            <input id="input-name" type="text" class="w-full bg-gray-50 text-gray-800 text-lg border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-red-500 focus:bg-white transition" placeholder="例如：設計部 小明">
+            <p id="name-error" class="text-red-500 text-sm mt-2 hidden"><i class="fas fa-exclamation-circle"></i> 請輸入姓名</p>
+            
+            <div class="mt-6 flex justify-end">
+                <button onclick="saveName()" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-red-700 transition">確定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= 模態視窗：後台驗證碼 ================= -->
+<div id="modal-auth" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[80]">
+    <div class="modal-overlay absolute w-full h-full bg-black/60" onclick="closeAuthModal()"></div>
+    <div class="modal-container bg-white w-11/12 md:max-w-sm mx-auto rounded-2xl shadow-2xl z-50 p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-2">清除訂單驗證</h3>
+        <p class="text-gray-500 text-sm mb-4">請輸入驗證碼以完成並清除 <span id="auth-target-name" class="font-bold text-red-600"></span> 的訂單。</p>
+        <input id="input-auth-pwd" type="password" inputmode="numeric" class="w-full text-center tracking-widest text-2xl border rounded-xl px-4 py-2 mb-4 focus:ring-2 focus:ring-red-500 focus:outline-none" placeholder="●●●●">
+        <div class="flex gap-3">
+            <button onclick="closeAuthModal()" class="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg font-bold">取消</button>
+            <button onclick="confirmClearOrder()" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold shadow">確認清除</button>
+        </div>
+    </div>
 </div>
 
 <script>
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxerKFhXEvWGwA0v_0EwtUQ58KwLZ_KIvsU7kTctg1LYzVrP2HD87xSu4p3jRa4VA69Zw/exec";
-let menuData = [], cart = [], TABLE_NO = "";
-let tableButtonState = {}, lastPendingCount = 0;
+// ================= 設定區 =================
+// 請將此處替換為您的 GAS 網頁應用程式網址
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxerKFhXEvWGwA0v_0EwtUQ58KwLZ_KIvsU7kTctg1LYzVrP2HD87xSu4p3jRa4VA69Zw/exec"; 
 
-function switchView(view){
-  document.getElementById('order-view').style.display = view==='order'?'block':'none';
-  document.getElementById('admin-view').style.display = view==='admin'?'block':'none';
-  if(view==='admin') loadData();
-}
+// ================= 全域變數 =================
+let menuData = [];
+let cart = [];
+let userName = "";
+let currentView = "client";
+let targetClearTable = ""; // 暫存要清除的訂單人名
 
-// ===== 前台訂購功能 =====
-const now = new Date();
-document.getElementById("greeting-title").innerText = `嗨！今天是 ${now.getMonth()+1} 月 ${now.getDate()} 日`;
-
-async function postData(payload){
-  const res = await fetch(GAS_API_URL,{
-    method:"POST",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify(payload)
-  });
-  return await res.json();
-}
-
-async function fetchMenu(){
-  try{
-    const res = await fetch(`${GAS_API_URL}?action=getMenu`);
-    const result = await res.json();
-    if(result.ok){ menuData = result.data; renderCats(); displayMenu('all'); document.getElementById('loading-spinner').style.display='none'; }
-  }catch(e){ document.getElementById('loading-spinner').innerHTML="無法連接伺服器"; }
-}
-
-function renderCats(){
-  const nav = document.getElementById('category-nav');
-  const cats = [...new Set(menuData.map(i=>i.category))];
-  cats.forEach(c=>{
-    const b = document.createElement('button');
-    b.className="category-btn px-4 py-1.5 rounded-full border border-gray-300 text-sm";
-    b.innerText=c; b.onclick=()=>filterMenu(c); nav.appendChild(b);
-  });
-}
-
-function displayMenu(f){
-  const container=document.getElementById('menu-container'); container.innerHTML='';
-  const items=f==='all'?menuData:menuData.filter(i=>i.category===f);
-  items.forEach(i=>{
-    container.innerHTML+=`<div class="bg-white rounded-xl shadow-sm border p-4 flex justify-between">
-      <div>
-        <span class="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded">${i.category}</span>
-        <h3 class="font-bold mt-1">${i.name}</h3>
-        <p class="text-xs text-gray-400">${i.desc}</p>
-        <p class="text-red-600 font-bold mt-2">$${i.price}</p>
-      </div>
-      <button onclick="addToCart(${i.id})" class="bg-red-50 text-red-600 w-10 h-10 rounded-full">+</button>
-    </div>`;
-  });
-}
-
-function addToCart(id){
-  const i = menuData.find(m=>m.id===id); const exist=cart.find(c=>c.id===id);
-  if(exist) exist.qty++; else cart.push({...i,qty:1}); updateUI();
-}
-
-function updateUI(){
-  const list=document.getElementById('cart-items'); list.innerHTML=cart.length? '' : '<p class="text-gray-400">空空如也</p>';
-  let total=0, count=0;
-  cart.forEach(c=>{ total+=c.price*c.qty; count+=c.qty; list.innerHTML+=`<div class="flex justify-between text-sm"><span>${c.name} x ${c.qty}</span><span>$${c.price*c.qty}</span></div>`; });
-  document.getElementById('cart-count').innerText=count;
-  document.getElementById('total-price').innerText=`$${total}`;
-}
-
-async function submitOrder(){
-  if(!TABLE_NO) return alert("請輸入姓名"); if(!cart.length) return alert("沒選餐點");
-  const btn=document.getElementById('btn-submit'); btn.disabled=true; btn.innerText="傳送中...";
-  try{ const res = await postData({ action:"submitOrder", name:TABLE_NO, items:cart }); if(res.ok){ alert("送單成功"); cart=[]; updateUI(); toggleCart(); } }catch(e){ alert("傳送失敗"); }
-  btn.disabled=false; btn.innerText="送出訂單";
-}
-
-function toggleCart(){ document.getElementById('cart-sidebar').classList.toggle('translate-x-full'); document.getElementById('overlay').classList.toggle('hidden'); }
-function filterMenu(c){ document.querySelectorAll('.category-btn').forEach(b=>{ b.classList.toggle('active', b.innerText===c || (c==='all'&&b.innerText==='全部')); }); displayMenu(c); }
-
-window.onload = ()=>{
-  TABLE_NO = prompt("請輸入姓名") || "未知";
-  document.getElementById('table-no').innerText = TABLE_NO;
-  fetchMenu();
+// ================= 初始化 =================
+window.onload = () => {
+    updateGreeting();
+    // 嘗試從 localStorage 讀取名字
+    const storedName = localStorage.getItem("apan_user_name");
+    if(storedName) {
+        userName = storedName;
+        updateNameDisplay();
+    }
+    fetchMenu();
 };
 
-// ===== 後台管理功能 =====
-function money(n){ return "$"+Number(n||0); }
-function fmtTime(v){ try{ const d=new Date(v); const pad=x=>String(x).padStart(2,"0"); return `${pad(d.getHours())}:${pad(d.getMinutes())}`;}catch(e){return"";} }
-async function api(payload){ return await postData(payload); }
+function updateGreeting() {
+    const now = new Date();
+    document.getElementById("greeting-title").innerText = `嗨！今天是 ${now.getMonth() + 1} 月 ${now.getDate()} 日`;
+}
 
-async function loadData(){
-  document.getElementById("status").innerText="載入中...";
-  try{
-    const data = await api({ action:"getPendingOrdersMerged" });
-    if(data && data.ok){
-      const list = data.data || [];
-      lastPendingCount=list.length;
-      document.getElementById("status").innerText = list.length===0? "目前沒有訂單 ✅" : `目前有 ${list.length} 筆訂單`;
-      renderTables(list);
+// ================= API 呼叫 =================
+async function callApi(payload) {
+    try {
+        const res = await fetch(GAS_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        return await res.json();
+    } catch (e) {
+        console.error(e);
+        return { ok: false, message: "網路連線錯誤" };
     }
-  }catch(err){ console.error(err); }
 }
 
-function renderTables(data){
-  const root=document.getElementById("tables"); root.innerHTML="";
-  data.forEach(t=>{
-    if(!tableButtonState[t.name]) tableButtonState[t.name]=(t.status==="served")?"completed":"served";
-    const itemsHtml=(t.items||[]).map(x=>`<div class="flex justify-between border-b py-2 text-sm"><div><span class="font-bold">${x.item}</span> x${x.qty}</div><div class="font-bold text-red-600">${money(x.subtotal)}</div></div>`).join("");
-    const isServed = tableButtonState[t.name]!=="completed";
-    const el=document.createElement("div");
-    el.className=`rounded-2xl shadow-sm border p-4 transition-colors ${isServed?'bg-white border-gray-200':'bg-orange-50 border-orange-200'}`;
-    el.innerHTML=`
-      <div class="flex items-center justify-between mb-2">
-        <div class="text-xl font-black">${t.name}</div>
-        <button id="btn-${t.name}" onclick="handleTableAction('${t.name}')" class="font-bold px-6 py-2 rounded-xl transition-all ${isServed?'bg-green-600 hover:bg-green-700 text-white':'bg-blue-600 hover:bg-blue-700 text-white'}">
-        ${isServed?'領取':'已領取'}</button>
-      </div>
-      <div class="text-xs text-gray-400 mb-3">下單時間：${fmtTime(t.time)}</div>
-      <div class="space-y-1">${itemsHtml}</div>
-      <div class="flex justify-between mt-4 pt-3 border-t"><div class="font-bold text-gray-700">總計</div><div class="font-black text-xl text-red-600">${money(t.total)}</div></div>`;
-    root.appendChild(el);
-  });
-}
+// ================= 視圖切換 =================
+function switchView(view) {
+    currentView = view;
+    // 更新按鈕樣式
+    const btnClient = document.getElementById('btn-view-client');
+    const btnAdmin = document.getElementById('btn-view-admin');
+    const viewClient = document.getElementById('view-client');
+    const viewAdmin = document.getElementById('view-admin');
 
-async function handleTableAction(name){
-  const current = tableButtonState[name];
-  if(current==="served"){
-    const res = await api({ action:"markTableStatus", table:name, status:"served" });
-    if(res.ok){ tableButtonState[name]="completed"; loadData(); }
-  }else{
-    const pwd = prompt("請輸入後台密碼以清除訂單");
-    if(pwd!=="1127") return alert("密碼錯誤");
-    if(confirm(`確定清除 ${name} 訂單？`)){
-      const res = await api({ action:"markTableStatus", table:name, status:"completed" });
-      if(res.ok){ delete tableButtonState[name]; loadData(); }
+    if(view === 'client') {
+        btnClient.className = "px-3 py-1 rounded bg-white text-red-800 shadow transition";
+        btnAdmin.className = "px-3 py-1 rounded text-red-200 hover:text-white transition";
+        viewClient.classList.remove('hidden');
+        viewAdmin.classList.add('hidden');
+    } else {
+        btnClient.className = "px-3 py-1 rounded text-red-200 hover:text-white transition";
+        btnAdmin.className = "px-3 py-1 rounded bg-white text-red-800 shadow transition";
+        viewClient.classList.add('hidden');
+        viewAdmin.classList.remove('hidden');
+        loadAdminData(); // 切換到後台時自動讀取
     }
-  }
 }
 
-setInterval(()=>{ if(document.getElementById('admin-view').style.display!=='none') loadData(); },5000);
+// ================= 前台邏輯 =================
+
+// 1. 訂購人姓名設定
+function openNameModal() {
+    const modal = document.getElementById('modal-name');
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    modal.querySelector('.modal-container').classList.remove('scale-95');
+    modal.querySelector('.modal-container').classList.add('scale-100');
+    document.getElementById('input-name').value = userName;
+    document.getElementById('input-name').focus();
+}
+
+function closeNameModal() {
+    const modal = document.getElementById('modal-name');
+    modal.classList.add('opacity-0', 'pointer-events-none');
+    modal.querySelector('.modal-container').classList.add('scale-95');
+    modal.querySelector('.modal-container').classList.remove('scale-100');
+    document.getElementById('name-error').classList.add('hidden');
+}
+
+function saveName() {
+    const input = document.getElementById('input-name').value.trim();
+    if(!input) {
+        document.getElementById('name-error').classList.remove('hidden');
+        return;
+    }
+    userName = input;
+    localStorage.setItem("apan_user_name", userName);
+    updateNameDisplay();
+    closeNameModal();
+}
+
+function updateNameDisplay() {
+    const el = document.getElementById('display-name');
+    if(userName) {
+        el.innerText = userName;
+        el.classList.add('font-bold');
+    } else {
+        el.innerText = "設定訂購人";
+        el.classList.remove('font-bold');
+    }
+}
+
+// 2. 菜單與購物車
+async function fetchMenu() {
+    try {
+        const res = await fetch(`${GAS_API_URL}?action=getMenu`);
+        const result = await res.json();
+        if (result.ok) {
+            menuData = result.data;
+            renderCategories();
+            displayMenu('all');
+            document.getElementById('loading-spinner').style.display = 'none';
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (e) {
+        document.getElementById('loading-spinner').innerHTML = `<p class="text-red-500">載入失敗，請重新整理<br><span class="text-xs text-gray-400">${e.message}</span></p>`;
+    }
+}
+
+function renderCategories() {
+    const nav = document.getElementById('category-nav');
+    // 保留 "全部" 按鈕，移除其他
+    nav.innerHTML = '<button onclick="filterMenu(\'all\')" class="category-btn active px-4 py-1.5 rounded-full border border-gray-300 text-sm font-medium transition">全部</button>';
+    
+    const cats = [...new Set(menuData.map(i => i.category))];
+    cats.forEach(c => {
+        const b = document.createElement('button');
+        b.className = "category-btn px-4 py-1.5 rounded-full border border-gray-300 text-sm text-gray-600 transition";
+        b.innerText = c;
+        b.onclick = () => filterMenu(c);
+        nav.appendChild(b);
+    });
+}
+
+function filterMenu(c) {
+    document.querySelectorAll('.category-btn').forEach(b => {
+        const isActive = b.innerText === c || (c==='all' && b.innerText==='全部');
+        b.classList.toggle('active', isActive);
+        b.classList.toggle('text-gray-600', !isActive);
+        b.classList.toggle('border-gray-300', !isActive);
+    });
+    displayMenu(c);
+}
+
+function displayMenu(category) {
+    const container = document.getElementById('menu-container');
+    container.innerHTML = '';
+    const items = category === 'all' ? menuData : menuData.filter(i => i.category === category);
+    
+    if(items.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-10">此分類暫無商品</div>';
+        return;
+    }
+
+    items.forEach(i => {
+        const el = document.createElement('div');
+        el.className = "bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between h-full hover:shadow-md transition";
+        el.innerHTML = `
+            <div class="mb-3">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[10px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md font-bold">${i.category}</span>
+                </div>
+                <h3 class="font-bold text-lg text-gray-800 leading-tight">${i.name}</h3>
+                <p class="text-xs text-gray-400 mt-1 line-clamp-2">${i.desc}</p>
+            </div>
+            <div class="flex justify-between items-end mt-2">
+                <p class="text-red-600 font-black text-lg">$${i.price}</p>
+                <button onclick="addToCart(${i.id})" class="bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 w-9 h-9 rounded-full flex items-center justify-center transition shadow-sm">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>`;
+        container.appendChild(el);
+    });
+}
+
+function addToCart(id) {
+    const item = menuData.find(m => m.id === id);
+    const existing = cart.find(c => c.id === id);
+    if (existing) {
+        existing.qty++;
+    } else {
+        cart.push({...item, qty: 1});
+    }
+    
+    // 小動畫提示
+    const cartIcon = document.getElementById('cart-count');
+    cartIcon.classList.add('scale-125');
+    setTimeout(()=>cartIcon.classList.remove('scale-125'), 200);
+    
+    updateCartUI();
+}
+
+function updateCartUI() {
+    const list = document.getElementById('cart-items');
+    list.innerHTML = '';
+    
+    if (cart.length === 0) {
+        list.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-40 text-gray-400">
+                <i class="fas fa-shopping-basket text-4xl mb-2 text-gray-200"></i>
+                <p>還沒選擇餐點喔</p>
+            </div>`;
+        document.getElementById('cart-count').innerText = "0";
+        document.getElementById('total-price').innerText = "$0";
+        return;
+    }
+
+    let total = 0;
+    let count = 0;
+    
+    cart.forEach((c, index) => {
+        total += c.price * c.qty;
+        count += c.qty;
+        
+        const row = document.createElement('div');
+        row.className = "flex justify-between items-center bg-gray-50 p-3 rounded-xl";
+        row.innerHTML = `
+            <div class="flex-1">
+                <div class="font-bold text-gray-800">${c.name}</div>
+                <div class="text-xs text-gray-500">$${c.price} / 份</div>
+            </div>
+            <div class="flex items-center gap-3 bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm">
+                <button onclick="changeQty(${index}, -1)" class="text-gray-400 hover:text-red-600 w-5 text-center"><i class="fas fa-minus text-xs"></i></button>
+                <span class="font-bold w-4 text-center text-sm">${c.qty}</span>
+                <button onclick="changeQty(${index}, 1)" class="text-gray-400 hover:text-green-600 w-5 text-center"><i class="fas fa-plus text-xs"></i></button>
+            </div>
+            <div class="w-14 text-right font-bold text-gray-700">$${c.price * c.qty}</div>
+        `;
+        list.appendChild(row);
+    });
+    
+    document.getElementById('cart-count').innerText = count;
+    document.getElementById('total-price').innerText = `$${total}`;
+}
+
+function changeQty(index, delta) {
+    cart[index].qty += delta;
+    if(cart[index].qty <= 0) cart.splice(index, 1);
+    updateCartUI();
+}
+
+function toggleCart() {
+    document.getElementById('cart-sidebar').classList.toggle('translate-x-full');
+    document.getElementById('overlay').classList.toggle('hidden');
+    document.body.classList.toggle('modal-active');
+}
+
+async function submitOrder() {
+    if(!userName) {
+        alert("請先設定訂購人姓名！");
+        toggleCart();
+        openNameModal();
+        return;
+    }
+    if(!cart.length) return alert("購物車是空的");
+
+    const btn = document.getElementById('btn-submit');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 傳送中...';
+
+    const res = await callApi({ action: "submitOrder", name: userName, items: cart });
+    
+    if(res.ok) {
+        alert("✅ 訂單已送出！");
+        cart = [];
+        updateCartUI();
+        toggleCart();
+    } else {
+        alert("❌ 傳送失敗：" + (res.message || "未知錯誤"));
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+}
+
+
+// ================= 後台邏輯 (Admin) =================
+
+async function loadAdminData() {
+    const statusEl = document.getElementById('admin-status');
+    const container = document.getElementById('admin-orders-container');
+    statusEl.innerText = "資料讀取中...";
+    container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl"></i></div>';
+
+    const res = await callApi({ action: "getPendingOrdersMerged" });
+    
+    if(res.ok) {
+        const list = res.data || [];
+        statusEl.innerText = list.length === 0 ? "目前沒有未結訂單" : `目前有 ${list.length} 筆訂單`;
+        renderAdminTables(list);
+    } else {
+        statusEl.innerText = "讀取失敗";
+        container.innerHTML = `<div class="col-span-full text-center text-red-500">${res.message}</div>`;
+    }
+}
+
+function renderAdminTables(data) {
+    const container = document.getElementById('admin-orders-container');
+    container.innerHTML = "";
+    
+    if(data.length === 0) {
+        container.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-20 text-gray-300">
+            <i class="fas fa-clipboard-check text-6xl mb-4"></i>
+            <p class="text-lg">太棒了！所有訂單都處理完了</p>
+        </div>`;
+        return;
+    }
+
+    data.forEach(t => {
+        // status: pending (新訂單) -> served (已領取/上菜) -> completed (已結單/清除)
+        // 介面按鈕邏輯：
+        // 如果是 pending -> 顯示「領取」按鈕 (變為 served) -> 不需密碼
+        // 如果是 served -> 顯示「清除」按鈕 (變為 completed) -> 需密碼
+        
+        const isServed = t.status === 'served';
+        const cardClass = isServed ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200';
+        
+        let itemsHtml = t.items.map(x => `
+            <div class="flex justify-between border-b border-gray-100 last:border-0 py-2 text-sm">
+                <div class="text-gray-700">
+                    <span class="font-bold text-gray-900">${x.item}</span> 
+                    <span class="text-xs text-gray-500 ml-1">x${x.qty}</span>
+                </div>
+                <div class="font-bold text-gray-600">$${x.subtotal}</div>
+            </div>`
+        ).join("");
+
+        const div = document.createElement('div');
+        div.className = `rounded-2xl shadow-sm border p-5 transition-all ${cardClass}`;
+        
+        // 按鈕邏輯
+        // 1. 尚未領取 -> 按下變更為已領取 (不需要密碼)
+        // 2. 已領取 -> 按下清除 (需要密碼)
+        const btnHtml = isServed 
+            ? `<button onclick="triggerClearAuth('${t.name}')" class="bg-gray-800 hover:bg-gray-900 text-white text-sm font-bold px-4 py-2 rounded-lg shadow transition"><i class="fas fa-check-double mr-1"></i> 清除</button>`
+            : `<button onclick="markAsServed('${t.name}')" class="bg-green-500 hover:bg-green-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow transition"><i class="fas fa-bell mr-1"></i> 領取</button>`;
+        
+        const statusBadge = isServed
+            ? `<span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-bold">已取餐</span>`
+            : `<span class="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded font-bold">準備中</span>`;
+
+        div.innerHTML = `
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-xl font-black text-gray-800">${t.name}</h3>
+                        ${statusBadge}
+                    </div>
+                    <div class="text-xs text-gray-400 mt-1"><i class="far fa-clock"></i> ${formatTime(t.time)}</div>
+                </div>
+                ${btnHtml}
+            </div>
+            <div class="bg-white/50 rounded-xl p-2 mb-3 space-y-1">
+                ${itemsHtml}
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-gray-200/50">
+                <span class="font-bold text-gray-500 text-sm">總金額</span>
+                <span class="font-black text-xl text-red-600">$${t.total}</span>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// 格式化時間 HH:mm
+function formatTime(isoStr) {
+    try {
+        const d = new Date(isoStr);
+        return d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0');
+    } catch(e) { return "--:--"; }
+}
+
+// 動作：標記為已領取 (不需密碼)
+async function markAsServed(name) {
+    const res = await callApi({ action: "markTableStatus", table: name, status: "served" });
+    if(res.ok) {
+        loadAdminData(); // 重新讀取
+    } else {
+        alert("更新失敗");
+    }
+}
+
+// 動作：觸發清除驗證
+function triggerClearAuth(name) {
+    targetClearTable = name;
+    document.getElementById('auth-target-name').innerText = name;
+    document.getElementById('input-auth-pwd').value = "";
+    
+    const modal = document.getElementById('modal-auth');
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    document.getElementById('input-auth-pwd').focus();
+}
+
+function closeAuthModal() {
+    document.getElementById('modal-auth').classList.add('opacity-0', 'pointer-events-none');
+    targetClearTable = "";
+}
+
+// 動作：送出清除請求 (需密碼)
+async function confirmClearOrder() {
+    const pwd = document.getElementById('input-auth-pwd').value;
+    if(!pwd) return alert("請輸入驗證碼");
+    
+    const btn = document.querySelector('#modal-auth button.bg-red-600');
+    const orgText = btn.innerText;
+    btn.innerText = "處理中...";
+    btn.disabled = true;
+
+    const res = await callApi({ 
+        action: "markTableStatus", 
+        table: targetClearTable, 
+        status: "completed",
+        password: pwd 
+    });
+
+    btn.innerText = orgText;
+    btn.disabled = false;
+
+    if(res.ok) {
+        closeAuthModal();
+        loadAdminData();
+    } else {
+        alert(res.message || "驗證碼錯誤或系統異常");
+        document.getElementById('input-auth-pwd').value = "";
+        document.getElementById('input-auth-pwd').focus();
+    }
+}
+
+// 鍵盤支援：在驗證碼輸入框按 Enter 送出
+document.getElementById('input-auth-pwd').addEventListener('keyup', (e) => {
+    if(e.key === 'Enter') confirmClearOrder();
+});
 </script>
-
 </body>
 </html>
